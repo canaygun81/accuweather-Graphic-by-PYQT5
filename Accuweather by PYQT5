@@ -1,0 +1,83 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+import matplotlib.pyplot as plt
+import time
+import sys
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QTextEdit, QLineEdit
+from _saatlikMetetoroloji import Ui_MainWindow
+from PyQt5.QtWidgets import QTableWidgetItem
+
+
+class Window(QtWidgets.QMainWindow):
+        def __init__(self):
+            super(Window,self).__init__()
+            self.ui=Ui_MainWindow()
+            self.ui.setupUi(self)
+            self.ui.btnGrafik.clicked.connect(self.grafik)
+            self.ui.pushButton.clicked.connect(self.cikis)
+            self.ui.btnGnlkVeri.clicked.connect(self.veri)
+
+        def grafik(self):
+            self.havadurumu()
+            plt.title(f"{self.ui.txtSehir.toPlainText()} İçin Hava Durumu")
+            plt.ylabel("Sıcaklık")
+            plt.xlabel("Saat")
+            plt.plot(self.listesaat, self.listeintsicaklik, marker="o")
+            plt.show()
+
+        def veri(self):
+            self.havadurumu()
+
+            if self.ui.txtSehir.toPlainText() is not None:
+                self.ui.tblGnlkveri.setRowCount(len(self.listesaat))
+                self.ui.tblGnlkveri.setColumnCount(2)
+                self.ui.tblGnlkveri.setHorizontalHeaderLabels(("Saat","Sıcaklık"))
+
+                for items in range(len(self.listesaat)):
+                    self.ui.tblGnlkveri.setItem(items, 0, QTableWidgetItem(self.listesaat[items]))
+                    self.ui.tblGnlkveri.setItem(items, 1, QTableWidgetItem(self.listesicaklik[items]))
+
+
+        def cikis(self):
+            quit()
+
+        def havadurumu(self):
+            print(self.ui.txtSehir.toPlainText())
+
+            s = Service("your chrome.exe file path")
+            self.driver=webdriver.Chrome(service=s)
+            self.driver.get(f"https://www.accuweather.com/tr/search-locations?query={self.ui.txtSehir.toPlainText()}")
+            time.sleep(2)
+            self.driver.find_element(By.XPATH,"/html/body/div/div[3]/div/div[3]/a[2]/span").click()
+            time.sleep(2)
+            saat=self.driver.find_element(By.XPATH,"/ html / body / div / div[5] / div[1]").find_elements(By.CLASS_NAME,"date")
+            self.listesaat=[]
+            for z in saat:
+                self.listesaat.append(z.text)
+            print(self.listesaat)
+
+            self.listesicaklik=[]
+            for num in range(0,len(self.listesaat)):
+                sicaklik = self.driver.find_element(By.XPATH, f"//*[@id='hourlyCard{num}']/div[1]/div/div[1]/div")
+                self.listesicaklik.append(sicaklik.text)
+            print(self.listesicaklik)
+            self.listeintsicaklik = []
+            for i in self.listesicaklik:
+                sicaklik2 = i.split("°")
+                self.listeintsicaklik.append(int(sicaklik2[0]))
+            print(self.listeintsicaklik)
+
+
+
+
+
+
+def app():
+    app=QtWidgets.QApplication(sys.argv)
+    win=Window()
+    win.show()
+    sys.exit(app.exec_())
+
+app()
